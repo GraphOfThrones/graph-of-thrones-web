@@ -75,11 +75,10 @@ export default {
       let nodes = []
       let links = []
 
-      let i = 0
-      let node = {}
       let related = null
       if (!this.house) return { nodes, links }
 
+      // Finds all nodes scoped to this.house
       let matchedNodes = graph['@graph'].filter((n) => {
         if (n['@id'] === this.house['@id']) {
           return true
@@ -96,58 +95,47 @@ export default {
           })
           // console.log(related)
           if (related) {
-            console.log('FOUND???')
             return true
           }
         }
         return false
       })
 
-      // console.log(matchedNodes)
-      // return { nodes, links }
+      // addNode helper function
+      function addNode (node) {
+        // Checks to see if node is already in the graph
+        let found = nodes.find(n => n.id === node['@id'])
+        if (found) return
 
-      matchedNodes.forEach((node) => {
-        // node = graph['@graph'][i]
-
+        // Adds node with correct styling
         if (node['@type'] === 'foaf:Organization') {
-          // nodes.push({ id: node['@id'], name: node.name, _color: 'blue', _size: 20 })
+          nodes.push({ id: node['@id'], name: node.name, _color: 'blue', _size: 20 })
+          return
         } else {
           nodes.push({ id: node['@id'], name: node.name, _color: 'orange', _size: 10 })
         }
 
+        // Adds node's spouse, if it exists
         if (node.spouse) {
-          related = nodes.find(n => n.id === node.spouse)
-
-          if (!related) {
-            related = graph['@graph'].find(n => n['@id'] === node.spouse)
-            nodes.push({ id: related['@id'], name: related.name, _color: 'orange', _size: 10 })
-          }
-
+          let spouse = graph['@graph'].find(n => n['@id'] === node.spouse)
+          addNode(spouse)
           links.push({ sid: node['@id'], tid: node.spouse, _color: 'rebeccapurple', name: 'Spouse' })
-
-          // console.log(related)
         }
 
-        if (!node.affiliation) return
-
+        // Adds each affiliation
         node.affiliation.forEach((a) => {
-          related = nodes.find(n => n.id === a['@id'])
-
-          if (!related) {
-            related = graph['@graph'].find(n => n['@id'] === a['@id'])
-            nodes.push({ id: related['@id'], name: related.name, _color: 'blue', _size: 20 })
-          }
-
+          let house = graph['@graph'].find(n => n['@id'] === a['@id'])
+          addNode(house)
           links.push({ sid: node['@id'], tid: a['@id'], _color:'red', name: 'Allegiance' })
-
-          // console.log(related)
         })
 
-        related = null
 
-      // })
-      })
+      }
 
+      // Adds each node to the graph
+      matchedNodes.forEach((node) => { return addNode(node) })
+
+      // Returns the nodes and links
       return { nodes, links }
     },
     houses () {
@@ -190,7 +178,7 @@ body{
 }
 
 p.house-header {
-  position: fixed;
+  position: absolute;
 }
 
 ul.list-group {
